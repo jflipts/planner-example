@@ -1,12 +1,10 @@
 import {
-  BasicTrainPlanner,
   EventBus,
   EventType,
-  TransitCarPlanner,
-  TravelMode,
-  TriangleDemoPlanner,
-  Units
+  Units,
+  DelijnNmbsPlanner,
 } from "plannerjs";
+import getPlanner from "../PlannerMap/PlannerConfigurations"
 import React, { Component } from "react";
 
 import { Box } from "@material-ui/core";
@@ -14,9 +12,9 @@ import LogButton from "../LogButton/LogButton";
 import LogModal from "../LogModal/LogModal";
 import LogSummary from "../LogSummary/LogSummary";
 import PointMarkerLayer from "../MapLayers/PointMarkerLayer";
-import PointReacherLayer from "../MapLayers/PointReachedLayer";
 import ReactMapboxGl from "react-mapbox-gl";
 import ResetButton from "../ResetButton/ResetButton";
+import ReloadButton from "../ReloadButton/ReloadButton";
 import ResultBox from "../ResultBox/ResultBox";
 import RouteLayer from "../MapLayers/RouteLayer";
 import SettingsBox from "../SettingsBox/SettingsBox";
@@ -32,34 +30,48 @@ class PlannerMap extends Component {
     super(props);
 
     this.state = {
+      // General
       center: [4.5118, 50.6282], //Belgium
       zoom: [8],
       start: null,
       destination: null,
-      routeCoords: [],
-      route: null,
+
+      // State
       calculating: false,
       finished: false,
-      isLogModalOpen: false,
-      logs: [],
+
+      // Results
       query: null,
+      route: null,
+      routeCoords: [],
       scannedConnections: 0,
       routeStations: [],
       stationPopup: null,
-      fitBounds: null,
-      publicTransport: true,
-      profile: "walking",
-      triangleDemo: false,
-      pointReached: [],
-      timeElapsed: 0
+      fitBounds: null, // Bounds of the journey leg
+
+      // Logs
+      logs: [],
+      isLogModalOpen: false,
+
+      // Other
+      profile: "walking", // Constant
+      timeElapsed: 0,
+
+      // Planner config
+      tiled: false,
+      multilevel: false,
+      tree: false,
+      fetchStrategy: "straight-line",
     };
-    this.trainPlanner = new BasicTrainPlanner();
-    this.carPlanner = new TransitCarPlanner();
-    this.triangleDemoPlanner = new TriangleDemoPlanner();
+
+    this.trainPlanner = new DelijnNmbsPlanner(); // Default configuration
+
     this.timer = null;
-    EventBus.on(EventType.InvalidQuery, error => {
-      console.log("InvalidQuery", error);
-    })
+
+    EventBus
+      .on(EventType.InvalidQuery, error => {
+        console.log("InvalidQuery", error);
+      })
       .on(EventType.AbortQuery, reason => {
         console.log("AbortQuery", reason);
       })
@@ -78,82 +90,43 @@ class PlannerMap extends Component {
       .on(EventType.Warning, e => {
         console.warn(e);
       })
-      .on(EventType.PointReached, async p => {
-        try {
-          const point = await p;
-          this.setState({
-            pointReached: [...this.state.pointReached, point]
-          });
-        } catch (error) {
-          console.log(error);
-        }
-      });
   }
 
-  setFitBounds = fitBounds => {
-    this.setState({
-      fitBounds
-    });
-  };
 
-  resetRoute = complete => {
-    this.setState({
-      finished: false,
-      route: null,
-      routeCoords: [],
-      logs: [],
-      query: null,
-      scannedConnections: 0,
-      routeStations: [],
-      stationPopup: null,
-      fitBounds: null,
-      pointReached: []
-    });
-    if (complete) {
-      this.setState({
-        start: null,
-        destination: null,
-        center: [4.5118, 50.6282],
-        zoom: [8]
-      });
-    }
-  };
-
-  startTimer = () => {
-    this.timer = new Date();
-  };
-
-  stopTimer = () => {
-    const millis = new Date() - this.timer;
-    this.setState({ timeElapsed: millis });
-  };
 
   calculateRoute = () => {
-    const { start, destination, publicTransport, triangleDemo } = this.state;
+    const { start, destination } = this.state;
+    const { multilevel, tree, tiled, fetchStrategy } = this.state;
+
     if (start && destination) {
       this.resetRoute();
       this.startTimer();
       this.setState({
         calculating: true
       });
-      const planner = publicTransport
-        ? triangleDemo
-          ? this.triangleDemoPlanner
-          : this.trainPlanner
-        : this.carPlanner;
+
+      let planner;
+      if (tiled) {
+        planner = getPlanner(multilevel, tree);
+      } else {
+        planner = this.trainPlanner;
+      }
+
       let waiting = false;
       planner
+        .setProfileID("https://hdelva.be/profile/pedestrian")
         .query({
           from: { longitude: start.lng, latitude: start.lat },
           to: { longitude: destination.lng, latitude: destination.lat },
-          minimumDepartureTime: new Date(),
-          walkingSpeed: 3, // KmH
-          minimumWalkingSpeed: 3, // KmH
-          maximumWalkingDistance: 200, // meters
-          minimumTransferDuration: Units.fromMinutes(1),
+          minimumDepartureTime: new Date(2019, 11, 1, 12, 34, 2),
+          // walkingSpeed: 3, // KmH
+          // minimumWalkingSpeed: 3, // KmH
+          // maximumWalkingDistance: 200, // meters
+          // minimumTransferDuration: Units.fromMinutes(1),
           maximumTransferDuration: Units.fromMinutes(30),
-          maximumTravelDuration: Units.fromHours(1.5),
-          maximumTransfers: 4
+          tilesFetchStrategy: fetchStrategy,
+          // maximumTravelDuration: Units.fromHours(1.5),
+          // maximumTransfers: 4
         })
         .take(3)
         .on("data", async path => {
@@ -263,14 +236,51 @@ class PlannerMap extends Component {
     }
   };
 
+  resetRoute = complete => {
+    this.setState({
+      calculating: false,
+      finished: false,
+
+      query: null,
+      route: null,
+      routeCoords: [],
+      scannedConnections: 0,
+      routeStations: [],
+      stationPopup: null,
+      fitBounds: null,
+
+      logs: [],
+    });
+    if (complete) {
+      this.setState({
+        center: [4.5118, 50.6282],
+        zoom: [8],
+        start: null,
+        destination: null,
+      });
+    }
+  };
+
+  reloadRoute = () => {
+    this.resetRoute(false);
+    this.calculateRoute();
+  }
+
+  startTimer = () => {
+    this.timer = new Date();
+  };
+
+  stopTimer = () => {
+    const millis = new Date() - this.timer;
+    this.setState({ timeElapsed: millis });
+  };
+
   onMapClick = (map, e) => {
     const coord = e.lngLat;
     if (!this.state.start) {
       this.setState({ start: coord });
     } else if (!this.state.destination) {
-      this.setState({ destination: coord }, () => {
-        this.calculateRoute();
-      });
+      this.setState({ destination: coord }, () => { this.calculateRoute(); });
     }
   };
 
@@ -304,30 +314,27 @@ class PlannerMap extends Component {
     this.setState({ stationPopup: null });
   };
 
-  switchPublicTransport = () => {
-    this.setState(
-      {
-        publicTransport: !this.state.publicTransport,
-        profile: this.state.profile === "car" ? TravelMode.Walking : "car"
-      },
-      () => {
-        this.resetRoute(false);
-        this.calculateRoute();
-      }
-    );
+  setFitBounds = fitBounds => {
+    this.setState({ fitBounds });
   };
 
-  switchTriangleDemo = () => {
+  switchTiled = () => {
+    this.setState({ tiled: !this.state.tiled }, () => { this.resetRoute(false); });
+  }
+
+  switchMultilevel = () => {
+    this.setState({ multilevel: !this.state.multilevel }, () => { this.resetRoute(false); });
+  }
+
+  switchTree = () => {
     this.setState(
       {
-        triangleDemo: !this.state.triangleDemo
+        tree: !this.state.tree,
+        fetchStrategy: this.state.tree ? "straight-line" : "tree",
       },
-      () => {
-        this.resetRoute(false);
-        this.calculateRoute();
-      }
+      () => { this.resetRoute(false); }
     );
-  };
+  }
 
   render() {
     const {
@@ -346,11 +353,11 @@ class PlannerMap extends Component {
       routeStations,
       stationPopup,
       fitBounds,
-      publicTransport,
       profile,
-      triangleDemo,
-      pointReached,
-      timeElapsed
+      timeElapsed,
+      tiled,
+      multilevel,
+      tree,
     } = this.state;
     return (
       <Box boxShadow={2}>
@@ -378,13 +385,16 @@ class PlannerMap extends Component {
           response={route}
         ></LogModal>
         <SettingsBox
-          publicTransport={publicTransport}
-          switchPublicTransport={this.switchPublicTransport}
-          triangleDemo={triangleDemo}
-          switchTriangleDemo={this.switchTriangleDemo}
+          tiled={tiled}
+          switchTiled={this.switchTiled}
+          multilevel={multilevel}
+          switchMultilevel={this.switchMultilevel}
+          tree={tree}
+          switchTree={this.switchTree}
           disabled={calculating}
         ></SettingsBox>
         <ResetButton show={finished} resetRoute={this.resetRoute}></ResetButton>
+        <ReloadButton show={!finished} reloadRoute={this.reloadRoute}></ReloadButton>
         <Map
           // eslint-disable-next-line
           style="mapbox://styles/mapbox/streets-v9"
@@ -414,7 +424,6 @@ class PlannerMap extends Component {
             hidePopup={this.hidePopup}
             stationPopup={stationPopup}
           ></StationMarkerLayer>
-          <PointReacherLayer pointReached={pointReached}></PointReacherLayer>
         </Map>
       </Box>
     );

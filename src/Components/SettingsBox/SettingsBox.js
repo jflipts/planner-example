@@ -20,11 +20,13 @@ class SettingsBox extends Component {
 
   render() {
     const {
-      publicTransport,
-      switchPublicTransport,
-      triangleDemo,
-      switchTriangleDemo,
-      disabled
+      tiled,
+      switchTiled,
+      multilevel,
+      switchMultilevel,
+      tree,
+      switchTree,
+      disabled,
     } = this.props;
     return (
       <Card className={styles.topleft}>
@@ -34,27 +36,41 @@ class SettingsBox extends Component {
             <FormControlLabel
               control={
                 <Switch
-                  checked={publicTransport}
-                  value="publicTransport"
-                  onChange={switchPublicTransport}
+                  checked={tiled}
+                  value="tiled"
+                  onChange={switchTiled}
                   color="primary"
                   disabled={disabled}
                 />
               }
-              label="Use Public Transport"
+              label="Use Tiled Planner"
             />
-            {publicTransport ? (
+            {tiled ? (
               <FormControlLabel
                 control={
                   <Checkbox
-                    checked={triangleDemo}
-                    onChange={switchTriangleDemo}
-                    value="gilad"
+                    checked={multilevel}
+                    onChange={switchMultilevel}
+                    value="multilevel"
                     color="primary"
                     disabled={disabled}
                   />
                 }
-                label="Triangle demo planner"
+                label="Multilevel tiles"
+              />
+            ) : null}
+            {tiled ? (
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={tree}
+                    onChange={switchTree}
+                    value="tree"
+                    color="primary"
+                    disabled={disabled}
+                  />
+                }
+                label="Dynamic discovery"
               />
             ) : null}
           </FormGroup>
