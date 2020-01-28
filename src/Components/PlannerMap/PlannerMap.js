@@ -56,6 +56,8 @@ class PlannerMap extends Component {
 
       // Tiles
       tilesToFetch: [],
+      fetchedInternalNodes: [],
+      availableTiles: [],
 
       // Other
       profile: "walking", // Constant
@@ -94,10 +96,21 @@ class PlannerMap extends Component {
       .on(EventType.Warning, e => {
         console.warn(e);
       })
-      .on(EventType.TiledQuery, (query) => {
-        console.log(query.tilesToFetch)
-        this.setState({ tilesToFetch: [...query.tilesToFetch] })
+      .on(EventType.TilesToFetch, (tiles) => {
+        // console.log(query.tilesToFetch)
+        this.setState({ tilesToFetch: [...tiles] })
         console.log(this.state.tilesToFetch)
+      })
+      .on(EventType.FetchInternalNode, (node) => {
+        this.setState(prevState => ({
+          fetchedInternalNodes: [...prevState.fetchedInternalNodes, node]
+        }))
+        console.log(this.state.fetchedInternalNodes);
+      })
+      .on(EventType.AvailableTiles, (tiles) => {
+        // console.log(query.tilesToFetch)
+        this.setState({ availableTiles: [...tiles] })
+        console.log(this.state.availableTiles)
       })
   }
 
@@ -259,6 +272,8 @@ class PlannerMap extends Component {
       fitBounds: null,
 
       tilesToFetch: [],
+      fetchedInternalNodes: [],
+      availableTiles: [],
 
       logs: [],
     });
@@ -370,6 +385,8 @@ class PlannerMap extends Component {
       multilevel,
       tree,
       tilesToFetch,
+      fetchedInternalNodes,
+      availableTiles,
     } = this.state;
     return (
       <Box boxShadow={2}>
@@ -436,7 +453,13 @@ class PlannerMap extends Component {
             hidePopup={this.hidePopup}
             stationPopup={stationPopup}
           ></StationMarkerLayer>
-          <TileLayer tilesToFetch={tilesToFetch}></TileLayer>
+          <TileLayer tiles={tilesToFetch} color="#005eab"></TileLayer>
+          <TileLayer
+          tiles={fetchedInternalNodes}
+          color="#FF8C00"
+          opacity={0.1}
+          ></TileLayer>
+          <TileLayer tiles={availableTiles} color="#228B22"></TileLayer>
         </Map>
       </Box>
     );

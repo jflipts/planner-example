@@ -9,19 +9,20 @@ class TileLayer extends Component {
   }
 
   render() {
-    const { tilesToFetch } = this.props;
+    const { tiles, color, opacity} = this.props;
     return (
       <React.Fragment>
-        {(tilesToFetch && tilesToFetch.length > 0)
-          ? tilesToFetch
+        {(tiles && tiles.length > 0)
+          ? tiles
+            .filter((c) => c.zoom >= 7)
             .map((c, index) => (
               <Layer
                 key={index}
                 type="fill"
                 paint={{
-                  "fill-color": "#005eab", //blue
-                  "fill-opacity": 0.6,
-                  "fill-outline-color": "#005eab",
+                  "fill-color": color, //blue
+                  "fill-opacity": opacity ? opacity : 0.5,
+                  "fill-outline-color": color,//"#005eab",
                 }}
               >
                 <Feature coordinates={this.getBBox(c.x, c.y, c.zoom)} />
