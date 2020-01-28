@@ -12,6 +12,7 @@ import LogButton from "../LogButton/LogButton";
 import LogModal from "../LogModal/LogModal";
 import LogSummary from "../LogSummary/LogSummary";
 import PointMarkerLayer from "../MapLayers/PointMarkerLayer";
+import TileLayer from "../MapLayers/TileLayer";
 import ReactMapboxGl from "react-mapbox-gl";
 import ResetButton from "../ResetButton/ResetButton";
 import ReloadButton from "../ReloadButton/ReloadButton";
@@ -53,6 +54,9 @@ class PlannerMap extends Component {
       logs: [],
       isLogModalOpen: false,
 
+      // Tiles
+      tilesToFetch: [],
+
       // Other
       profile: "walking", // Constant
       timeElapsed: 0,
@@ -89,6 +93,11 @@ class PlannerMap extends Component {
       })
       .on(EventType.Warning, e => {
         console.warn(e);
+      })
+      .on(EventType.TiledQuery, (query) => {
+        console.log(query.tilesToFetch)
+        this.setState({ tilesToFetch: [...query.tilesToFetch] })
+        console.log(this.state.tilesToFetch)
       })
   }
 
@@ -249,6 +258,8 @@ class PlannerMap extends Component {
       stationPopup: null,
       fitBounds: null,
 
+      tilesToFetch: [],
+
       logs: [],
     });
     if (complete) {
@@ -358,6 +369,7 @@ class PlannerMap extends Component {
       tiled,
       multilevel,
       tree,
+      tilesToFetch,
     } = this.state;
     return (
       <Box boxShadow={2}>
@@ -397,7 +409,7 @@ class PlannerMap extends Component {
         <ReloadButton show={!finished} reloadRoute={this.reloadRoute}></ReloadButton>
         <Map
           // eslint-disable-next-line
-          style="mapbox://styles/mapbox/streets-v9"
+          style="mapbox://styles/mapbox/streets-v9?optimize=true"
           containerStyle={{
             height: "100vh",
             width: "100vw"
@@ -424,6 +436,7 @@ class PlannerMap extends Component {
             hidePopup={this.hidePopup}
             stationPopup={stationPopup}
           ></StationMarkerLayer>
+          <TileLayer tilesToFetch={tilesToFetch}></TileLayer>
         </Map>
       </Box>
     );
