@@ -9,28 +9,36 @@ class TileLayer extends Component {
   }
 
   render() {
-    const { tiles, color, opacity} = this.props;
-    return (
-      <React.Fragment>
-        {(tiles && tiles.length > 0)
-          ? tiles
-            .filter((c) => c.zoom >= 7)
-            .map((c, index) => (
-              <Layer
-                key={index}
-                type="fill"
-                paint={{
-                  "fill-color": color, //blue
-                  "fill-opacity": opacity ? opacity : 0.5,
-                  "fill-outline-color": color,//"#005eab",
-                }}
-              >
-                <Feature coordinates={this.getBBox(c.x, c.y, c.zoom)} />
-              </Layer>
-            ))
-          : null}
-      </React.Fragment>
-    );
+    const { tiles, color, opacity } = this.props;
+    if (tiles && tiles.length > 0) {
+      const tileboundaries = tiles
+        .filter((c) => c.zoom >= 0)
+        .map((c) => (
+          this.getBBox(c.x, c.y, c.zoom)
+        ))
+
+      if (tileboundaries.length === 0) {
+        return null;
+      }
+
+      return (
+        <React.Fragment>
+          <Layer
+            key={color}
+            type="fill"
+            paint={{
+              "fill-color": color,
+              "fill-opacity": opacity ? opacity : 0.5,
+              "fill-outline-color": color,
+            }}
+          >
+            <Feature coordinates={tileboundaries} />
+          </Layer>
+        </React.Fragment>
+      )
+    } else {
+      return null;
+    }
   }
 
   tileToLon(tileX, zoom) {

@@ -97,20 +97,15 @@ class PlannerMap extends Component {
         console.warn(e);
       })
       .on(EventType.TilesToFetch, (tiles) => {
-        // console.log(query.tilesToFetch)
         this.setState({ tilesToFetch: [...tiles] })
-        console.log(this.state.tilesToFetch)
       })
       .on(EventType.FetchInternalNode, (node) => {
         this.setState(prevState => ({
           fetchedInternalNodes: [...prevState.fetchedInternalNodes, node]
         }))
-        console.log(this.state.fetchedInternalNodes);
       })
       .on(EventType.AvailableTiles, (tiles) => {
-        // console.log(query.tilesToFetch)
         this.setState({ availableTiles: [...tiles] })
-        console.log(this.state.availableTiles)
       })
   }
 
@@ -457,7 +452,7 @@ class PlannerMap extends Component {
           <TileLayer
           tiles={fetchedInternalNodes}
           color="#FF8C00"
-          opacity={0.1}
+          opacity={0.08}
           ></TileLayer>
           <TileLayer tiles={availableTiles} color="#228B22"></TileLayer>
         </Map>
